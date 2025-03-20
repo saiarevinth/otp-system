@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OTP Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-container {
+            background-color: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>OTP Verification</h2>
+        
+        <!-- Send OTP Form -->
+        <div id="send-otp-form">
+            <h3>Send OTP</h3>
+            <div class="form-group">
+                <label for="phone">Phone Number:</label>
+                <input type="text" id="phone" name="phone" placeholder="Enter phone number with country code">
+            </div>
+            <button onclick="sendOTP()">Send OTP</button>
+            <div id="send-message" class="message"></div>
+        </div>
+
+        <!-- Verify OTP Form -->
+        <div id="verify-otp-form" style="display: none;">
+            <h3>Verify OTP</h3>
+            <div class="form-group">
+                <label for="otp">Enter OTP:</label>
+                <input type="text" id="otp" name="otp" placeholder="Enter 6-digit OTP">
+            </div>
+            <button onclick="verifyOTP()">Verify OTP</button>
+            <div id="verify-message" class="message"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentPhoneNumber = '';
+
+        async function sendOTP() {
+            const phone = document.getElementById('phone').value;
+            if (!phone) {
+                showMessage('send-message', 'Please enter a phone number', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/otp-whatsapp/send_otp/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ phone_number: phone })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentPhoneNumber = phone;
+                    showMessage('send-message', data.message, 'success');
+                    document.getElementById('verify-otp-form').style.display = 'block';
+                } else {
+                    showMessage('send-message', data.error, 'error');
+                }
+            } catch (error) {
+                showMessage('send-message', 'Error sending OTP', 'error');
+            }
+        }
+
+        async function verifyOTP() {
+            const otp = document.getElementById('otp').value;
+            if (!otp) {
+                showMessage('verify-message', 'Please enter the OTP', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/otp-whatsapp/verify_otp/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        phone_number: currentPhoneNumber,
+                        otp: otp
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage('verify-message', data.message, 'success');
+                    // Reset forms after successful verification
+                    setTimeout(() => {
+                        document.getElementById('verify-otp-form').style.display = 'none';
+                        document.getElementById('phone').value = '';
+                        document.getElementById('otp').value = '';
+                        currentPhoneNumber = '';
+                    }, 2000);
+                } else {
+                    showMessage('verify-message', data.error, 'error');
+                }
+            } catch (error) {
+                showMessage('verify-message', 'Error verifying OTP', 'error');
+            }
+        }
+
+        function showMessage(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `message ${type}`;
+        }
+    </script>
+</body>
+</html> 
